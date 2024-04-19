@@ -22,9 +22,17 @@
 #import "MoVFLHelper.h"
 #import "MoUtils.h"
 #import "Sparkle/SUUpdater.h"
+#import <CoreMIDI/CoreMIDI.h>
+#import "EventCenter.h"
+#import "AppDelegate.h"
 
-@implementation ViewController
-{
+
+MoDate selectedDate;
+
+
+@implementation ViewController{
+    
+
     EventCenter   *_ec;
     MoCalendar    *_moCal;
     NSCalendar    *_nsCal;
@@ -40,9 +48,17 @@
     BOOL       _clockUsesSeconds;
     BOOL       _clockUsesTime;
     BOOL       _shouldShowMeetingIndicator;
+    BOOL       _isFirstTime;
     NSRect     _screenFrame;
     NSPopover *_newEventPopover;
+    int eventCount;
+    NSDate *date;
+    NSTableView *tableView;
+    
+    NSInteger badgeCount;
+
 }
+
 
 - (void)dealloc
 {
@@ -62,6 +78,9 @@
     // View controller content view
     NSView *v = [NSView new];
     v.translatesAutoresizingMaskIntoConstraints = NO;
+    
+    
+
     
     // MoCalendar
     _moCal = [MoCalendar new];
@@ -92,6 +111,9 @@
     _btnPin.alternateImage = [NSImage imageNamed:@"btnPinAlt"];
     [_btnPin setButtonType:NSButtonTypeToggle];
     
+   // _btnclock = btn(@"btnclock", NSLocalizedString(@"Open Calendar   ⌘O", @""), @"o", @selector(openCalendarWithEvent));
+
+    
     // Agenda
     _agendaVC = [AgendaViewController new];
     _agendaVC.delegate = self;
@@ -100,10 +122,12 @@
     [v addSubview:agenda];
 
     // Constraints
-    MoVFLHelper *vfl = [[MoVFLHelper alloc] initWithSuperview:v metrics:nil views:NSDictionaryOfVariableBindings(_moCal, _btnAdd, _btnCal, _btnOpt, _btnPin, agenda)];
+    MoVFLHelper *vfl = [[MoVFLHelper alloc] initWithSuperview:v metrics:nil views:NSDictionaryOfVariableBindings(_moCal, _btnAdd, _btnCal, _btnOpt, _btnPin,agenda)];
     [vfl :@"H:|-2-[_moCal]-2-|"];
     [vfl :@"H:|[agenda]|"];
-    [vfl :@"H:|-8-[_btnAdd]-(>=0)-[_btnPin]-6-[_btnCal]-6-[_btnOpt]-8-|" :NSLayoutFormatAlignAllCenterY];
+    [vfl :@"H:|-8-[_btnAdd]-8-[_btnPin]-6-[_btnCal]-6-[_btnOpt]|" :NSLayoutFormatAlignAllCenterY];
+
+   // [vfl :@"H:|-8-[_btnAdd]-(>=0)-[_btnPin]-6-[_btnCal]-6-[_btnOpt]-8-|" :NSLayoutFormatAlignAllCenterY];
     [vfl :@"V:|[_moCal]-6-[_btnOpt(22)]-1-[agenda]-(-1)-|"];
     
     self.view = v;
@@ -113,7 +137,8 @@
 {
     // The order of the statements is important! Subsequent statments
     // depend on previous ones.
-    
+    _isFirstTime = true;
+    date = NSDate.new;
     _iconDateFormatter = [NSDateFormatter new];
     _iconDateFormatter.formattingContext = NSFormattingContextStandalone;
     _iconDateFormatter.calendar = [NSCalendar calendarWithIdentifier:NSCalendarIdentifierISO8601];
@@ -172,6 +197,84 @@
 
     [self.itsycalWindow makeFirstResponder:_moCal];
 }
+
+- (void)updateBadgeCount:(BOOL*)isFristTimeVal {
+    
+    // Create an attributed string for the badge with red color and circular shape
+    NSString *badgeString = [NSString stringWithFormat:@"%d", self.badgeCount];
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [NSFont systemFontOfSize:10.0 weight:NSFontWeightRegular], // Adjust font size as needed
+        NSForegroundColorAttributeName: [NSColor whiteColor] // White color for text
+    };
+    NSAttributedString *attributedBadgeString = [[NSAttributedString alloc] initWithString:badgeString attributes:attributes];
+
+    // Create a circular badge
+    CGSize badgeSize = NSMakeSize(13.0, 13.0);
+    NSBezierPath *badgePath = [NSBezierPath bezierPathWithOvalInRect:NSMakeRect(0.0, 0.0, badgeSize.width, badgeSize.height)];
+
+    // Create a badge image with red color
+    NSImage *badgeImage = [[NSImage alloc] initWithSize:badgeSize];
+    [badgeImage lockFocus];
+    [[NSColor redColor] setFill]; // Red color for badge background
+    [badgePath fill];
+    [attributedBadgeString drawAtPoint:NSMakePoint((badgeSize.width - attributedBadgeString.size.width) / 2.0, (badgeSize.height - attributedBadgeString.size.height) / 2.0)];
+    [badgeImage unlockFocus];
+    
+    NSImageView *badgeView = [[NSImageView alloc] initWithFrame:NSMakeRect(0.0, 0.0, badgeSize.width, badgeSize.height)];
+    [badgeView setImage:badgeImage];
+    
+    NSRect buttonFrame = [_btnCal frame];
+    
+    CGFloat badgeTop = NSMaxY(buttonFrame) - 7.0;
+    CGFloat badgeRight = NSMaxX(buttonFrame) - 7.0;
+    NSRect badgeFrame = NSMakeRect(badgeRight, badgeTop, badgeSize.width, badgeSize.height);
+    [badgeView setFrame:badgeFrame];
+    
+    NSView *vw = [self.view.superview viewWithTag:10001];
+    if (vw != nil) {
+        if (self.badgeCount < 1) {
+            for (NSView *view in [_btnCal.superview subviews])
+            {
+                if (view.tag == 10001) {
+                    [view removeFromSuperview];
+                }
+            }
+        } else {
+            NSView *buttonSuperview = [_btnCal superview];
+            badgeView.tag = 10001;
+            [buttonSuperview addSubview:badgeView];
+        }
+    } else {
+        if (self.badgeCount > 0) {
+            NSView *buttonSuperview = [_btnCal superview];
+            badgeView.tag = 10001;
+            [buttonSuperview addSubview:badgeView];
+        }
+    }
+    if (*isFristTimeVal == YES) {
+        for (NSView *view in [_btnCal.superview subviews])
+        {
+            if (view.tag == 10001) {
+                [view removeFromSuperview];
+            }
+        }
+        
+    }
+    
+}
+
+
+- (void)someMethodWhereYouWantToUpdateBadge {
+    // Assuming you have some logic to calculate the badge count
+   // NSInteger count = AppDelegate.sharedAppDelegate._eventsForDateNew.count;
+
+    // Update badge count
+  //  self.badgeCount = count;
+    
+    // Update button title
+   
+}
+
 
 #pragma mark -
 #pragma mark Keyboard & button actions
@@ -273,6 +376,8 @@
     _newEventPopover.contentViewController = eventVC;
     _newEventPopover.appearance = NSApp.effectiveAppearance;
     [_newEventPopover showRelativeToRect:_btnAdd.bounds ofView:_btnAdd preferredEdge:NSRectEdgeMinX];
+    
+
 }
 
 - (void)showCalendarApp:(id)sender
@@ -328,6 +433,59 @@
     NSString *url = [NSString stringWithFormat:@"%@/%04zd-%02zd-%02zd", urlScheme, comp.year, comp.month, comp.day];
     [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:url]];
 }
+
+- (void)openCalendarWithEvent {
+    // Create an event store
+    EKEventStore *eventStore = [[EKEventStore alloc] init];
+    
+    // Request access to the user's calendar
+    EKAuthorizationStatus authorizationStatus = EKAuthorizationStatusAuthorized;
+    [eventStore requestAccessToEntityType:EKEntityTypeEvent completion:^(BOOL granted, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if ((granted) || (authorizationStatus == EKAuthorizationStatusAuthorized)) {
+                NSDatePicker *datePicker = [[NSDatePicker alloc] initWithFrame:NSMakeRect(0, 0, 200, 200)];
+                datePicker.datePickerMode = NSDatePickerModeSingle;
+                datePicker.datePickerStyle = NSDatePickerStyleTextFieldAndStepper;
+                datePicker.dateValue = [NSDate date];
+                
+                NSAlert *alert = [[NSAlert alloc] init];
+                [alert setMessageText:@"Select Alarm Time"];
+                [alert setAccessoryView:datePicker];
+                [alert addButtonWithTitle:@"OK"];
+                [alert addButtonWithTitle:@"Cancel"];
+                NSModalResponse response = [alert runModal];
+                
+                if (NSModalResponseOK == 1) {
+                    NSDate *alarmTime = datePicker.dateValue;
+                    
+                    EKEvent *event = [EKEvent eventWithEventStore:eventStore];
+                    event.title = @"Wake up alarm";
+                    event.notes = @"Time to wake up!";
+                    event.startDate = alarmTime;
+                    event.endDate = [event.startDate dateByAddingTimeInterval:60*2]; // Set end date to 2 minutes later
+                    event.calendar = [eventStore defaultCalendarForNewEvents];
+                    
+                    EKAlarm *alarm = [EKAlarm alarmWithAbsoluteDate:event.startDate];
+                    NSSound *sound = [NSSound soundNamed:@"Silk"];
+                  //  sound.loops = true;
+                    alarm.soundName = sound.name;//@"Sosumi";
+                    [event addAlarm:alarm];
+                    
+                    NSError *saveError = nil;
+                    [eventStore saveEvent:event span:EKSpanThisEvent commit:YES error:&saveError];
+                    if (saveError) {
+                        NSLog(@"Error saving event: %@", saveError);
+                    } else {
+                      [[NSWorkspace sharedWorkspace] launchApplication:@"Calendar"];
+                    }
+               }
+            } else {
+                NSLog(@"Access to calendar was not granted");
+            }
+        });
+    }];
+}
+
 
 - (void)showOptionsMenu:(id)sender
 {
@@ -453,7 +611,12 @@
 #pragma mark Menubar item
 
 - (void)createStatusItem
+
 {
+    
+//    NSStatusItem  *newStatusItem;
+//    newStatusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
+//    newStatusItem.button.title = @"new55";
     _statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     _statusItem.button.target = self;
     _statusItem.button.action = @selector(statusItemClicked:);
@@ -462,9 +625,9 @@
 
     // Remember item position in menubar. (@pskowronek (Github))
     [_statusItem setAutosaveName:@"ItsycalStatusItem"];
-
+    
     [self clockFormatDidChange];
-    [self updateMenubarIcon];
+   // [self updateMenubarIcon];
     [self positionItsycalWindow];
 
     // Notification for when status item view moves
@@ -584,7 +747,43 @@
     }
     _statusItem.button.accessibilityTitle = accessibilityTitle;
     [self adjustStatusItemWidthIfNecessary];
+    NSDictionary *attributes = @{NSBackgroundColorAttributeName:NSColor.blackColor, NSForegroundColorAttributeName: NSColor.whiteColor};
+    
+    NSMutableString *template = @"d".mutableCopy;
+        [template appendString:@"MMM"];
+        [template appendString:@"EEE"];
+    [_iconDateFormatter setDateFormat:[NSDateFormatter dateFormatFromTemplate:template options:0 locale:[NSLocale currentLocale]]];
+    NSString *iconText = [_iconDateFormatter stringFromDate:date];
+    
+    
+    
+    
+    
+   // NSString *iconText = [self iconText];
+    NSString *string = [NSString stringWithFormat:@"%d  ", eventCount];
+    NSString *string2 = [NSString stringWithFormat:@"  %@  ", iconText];
+    NSMutableAttributedString * str2 = [[NSMutableAttributedString alloc] initWithString:string ];
+  
+    NSMutableAttributedString * str1 = [[NSMutableAttributedString alloc] initWithString:string2 attributes: attributes];
+    [str2 appendAttributedString:str1];
+    if (eventCount > 0) {
+        _statusItem.button.imagePosition = NSImageLeft;
+        _statusItem.button.image = [NSImage imageNamed:@"btnclock"];
+        _statusItem.button.attributedTitle = str2;
+    } else {
+        _statusItem.button.image = nil;
+        _statusItem.button.attributedTitle = str1;
+    }
+    
 }
+
+- (void) showList {
+    
+    
+    
+}
+
+
 
 - (void)adjustStatusItemWidthIfNecessary
 {
@@ -1041,12 +1240,19 @@
     //os_log(OS_LOG_DEFAULT, "%s", __FUNCTION__);
     _filteredEventsForDate = [_ec filteredEventsForDate];
     [_moCal reloadData];
-    [self updateAgenda];
+   // [self updateAgenda];
+//    
+    
 }
 
 - (MoDate)fetchStartDate
 {
     return _moCal.firstDate;
+}
+
+- (MoDate)selectedDateNew
+{
+    return _moCal.selectedDate;
 }
 
 - (MoDate)fetchEndDate
@@ -1067,12 +1273,93 @@
 }
 
 - (void)updateAgenda
+
 {
+    int time;
+    time = _isFirstTime ? 1.4 : 0;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, time * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        
     NSInteger days = [self daysToShowInAgenda];
-    _agendaVC.events = [self datesAndEventsForDate:_moCal.selectedDate days:days];
-    [_agendaVC reloadData];
+        self->_agendaVC.events = [self datesAndEventsForDate:self->_moCal.selectedDate days:days];
+        selectedDate = self->_moCal.selectedDate;
+        [self->_agendaVC reloadData];
     [self showMeetingIndicatorIfNecessary];
+        if (self->_agendaVC.events.count < 1) {
+            self->_agendaVC.events = AppDelegate.sharedAppDelegate._eventsForDateNew.allKeys;
+            self->_agendaVC.reloadData;
+        }
+    
+    int countVal;
+    NSMutableDictionary *allEvents = [[NSMutableDictionary alloc]initWithCapacity:100];
+    
+    for (NSDate *objDate in AppDelegate.sharedAppDelegate._eventsForDateNew) {
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateFormat:@"yyyy-MM-dd"];
+        NSString *stringFromDate = [formatter stringFromDate:objDate];
+        [allEvents setObject: AppDelegate.sharedAppDelegate._eventsForDateNew[objDate] forKey:stringFromDate];
+    }
+    
+    countVal = 0;
+        NSDate *selectedNsDate;
+        
+        NSString *dateStr;
+        dateStr = [NSString stringWithFormat:@"%ld-%ld-%ld", (long)self->_moCal.selectedDate.year,(long)self->_moCal.selectedDate.month,(long)self->_moCal.selectedDate.day];
+        
+        NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+        selectedNsDate = [dateFormatter dateFromString:dateStr];
+        
+        
+    for (NSString *dateString in allEvents) {
+        NSArray *date =  [dateString componentsSeparatedByString:@" "];
+        if (date.count > 0) {
+            NSString *year =  [date.firstObject componentsSeparatedByString:@"-"][0];
+            NSString *month =  [date.firstObject componentsSeparatedByString:@"-"][1];
+            NSString *day =  [date.firstObject componentsSeparatedByString:@"-"][2];
+            NSInteger yearInt = [year integerValue];
+            NSInteger monthInt = [month integerValue];
+            NSInteger dayInt = [day integerValue];
+            if ((yearInt == self->_moCal.selectedDate.year) && (monthInt == self->_moCal.selectedDate.month + 1) && (dayInt == self->_moCal.selectedDate.day)) {
+                NSArray *events = allEvents[dateString];
+                countVal = (int)[events count];
+                
+            }
+        }
+    }
+    self.badgeCount = countVal;
+        self->eventCount = countVal;
+        self-> date = selectedNsDate;
+        [self updateMenubarIcon];
+        [self updateBadgeCount:&(self->_isFirstTime)];
+        if (self->_isFirstTime == TRUE) {
+            self->_isFirstTime = false;
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+                [self updateAgenda];
+            });
+           
+        }
+        
+    
+   [self eventCenterEventsChanged];
+    NSCalendar *cal = [NSCalendar currentCalendar];
+        MoDate moDate = self->_moCal.selectedDate;
+    NSDate *selectedDate = MakeNSDateWithDate(moDate, cal);
+    NSArray *eventsForSelectedDate = [self eventsForDate:moDate];
+    NSUInteger totalEventsForSelectedDate = [eventsForSelectedDate count];
+
+    NSLog(@"Total number of events for %@: %lu", selectedDate, (unsigned long)totalEventsForSelectedDate);
+    });
+
 }
+
+
+
+
+
+
+//- (MoDate) getD {
+//    return _moCal.selectedDate;
+//}
 
 #pragma mark -
 #pragma mark Time

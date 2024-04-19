@@ -10,14 +10,20 @@
 #import <EventKit/EventKit.h>
 #import "MoDate.h"
 
+
 // =========================================================================
 // EventCenter
 // Provide calendar and event data.
 // =========================================================================
 
+
 @protocol EventCenterDelegate;
 
+
 @interface EventCenter : NSObject
+
+
+ 
 
 // Did the user grant calendar access?
 @property (nonatomic, readonly) BOOL calendarAccessGranted;
@@ -69,6 +75,7 @@
 - (void)eventCenterEventsChanged;
 - (MoDate)fetchStartDate;
 - (MoDate)fetchEndDate;
+-(MoDate)selectedDateNew;
 
 @end
 

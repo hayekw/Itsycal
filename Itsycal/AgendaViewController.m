@@ -310,6 +310,7 @@ static NSString *kEventCellIdentifier = @"EventCell";
 
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
 {
+    
     return self.events == nil ? 0 : self.events.count;
 }
 

@@ -10,5 +10,8 @@
 
 @interface AppDelegate : NSObject <NSApplicationDelegate, NSAlertDelegate>
 
+@property (nonatomic, strong) NSMutableDictionary *_eventsForDateNew;
++ (AppDelegate *)sharedAppDelegate;
+
 @end
 

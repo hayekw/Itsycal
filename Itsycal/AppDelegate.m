@@ -15,9 +15,17 @@
 #import "MoUtils.h"
 #import "MASShortcut/Shortcut.h"
 
+
+
+
 @implementation AppDelegate
 {
     NSWindowController *_wc;
+    
+}
+
++ (AppDelegate *)sharedAppDelegate{
+    return (AppDelegate *)[NSApplication sharedApplication].delegate;
 }
 
 + (void)initialize
@@ -55,6 +63,9 @@
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification
 {
+    
+    
+  
     // Ensure the user has moved Itsycal to the /Applications folder.
     // Having the user manually move Itsycal to /Applications turns off
     // Gatekeeper Path Randomization (introduced in 10.12) and allows
@@ -62,7 +73,6 @@
 #ifndef DEBUG
     [self checkIfRunFromApplicationsFolder];
 #endif
-
     // Initialize the 'Theme' global variable which can be
     // used throught the app instead of '[Themer shared]'.
     [Themer shared];
@@ -79,7 +89,7 @@
         url = [url URLByAppendingPathComponent:bundleID isDirectory:YES];
         [[NSFileManager defaultManager] createDirectoryAtURL:url withIntermediateDirectories:YES attributes:nil error:NULL];
     }
-
+    
     // 0.11.1 introduced a new way to highlight columns in the calendar.
     [self weekendHighlightFixup];
     

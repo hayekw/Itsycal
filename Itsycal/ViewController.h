@@ -12,10 +12,12 @@
 #import "AgendaViewController.h"
 #import "TooltipViewController.h"
 
+
+
 @interface ViewController : NSViewController <NSWindowDelegate, AgendaDelegate, MoCalendarDelegate, EventCenterDelegate, TooltipViewControllerDelegate, NSPopoverDelegate>
+@property (nonatomic, assign) int badgeCount;
 
 - (void)keyboardShortcutActivated;
 - (void)removeStatusItem;
 - (void)dateURLReceived:(NSDate *)showDate;
-
 @end

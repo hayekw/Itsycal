@@ -6,9 +6,17 @@
 //  Copyright (c) 2015 mowglii.com. All rights reserved.
 //
 
+
+
+
+
 #import <os/log.h>
 #import <AppKit/NSWorkspace.h>
 #import "EventCenter.h"
+#import "AppDelegate.h"
+
+
+
 
 // NSUserDefaults key for array of selected calendar IDs.
 static NSString *kSelectedCalendars = @"SelectedCalendars";
@@ -159,6 +167,8 @@ static NSString *kSelectedCalendars = @"SelectedCalendars";
         }
     });
 }
+
+
 
 - (void)refetchAll {
     //os_log(OS_LOG_DEFAULT, "%s", __FUNCTION__);
@@ -349,6 +359,17 @@ static NSString *kSelectedCalendars = @"SelectedCalendars";
     
     [_eventsForDate addEntriesFromDictionary:eventsForDate];
     [self _filterEvents];
+    
+    NSUInteger totalEvents = 0;
+    for (NSDate *date in _eventsForDate) {
+        totalEvents += [_eventsForDate[date] count];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        AppDelegate.sharedAppDelegate._eventsForDateNew = self->_eventsForDate;
+    });
+
+    
 }
 
 - (void)_filterEvents {
