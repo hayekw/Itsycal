@@ -23,12 +23,17 @@ static NSString *kEventCellIdentifier = @"EventCell";
 
 @interface AgendaRowView : NSTableRowView
 @property (nonatomic) BOOL isHovered;
+@property (nonatomic) NSTextField *descTextField;
+@property (nonatomic) NSTextField *timeTextFields;
 @end
 
 @interface AgendaDateCell : NSView
 @property (nonatomic) NSTextField *dayTextField;
 @property (nonatomic) NSTextField *DOWTextField;
+@property (nonatomic) NSTextField *descTextField;
+@property (nonatomic) NSTextField *timeTextFields;
 @property (nonatomic, weak) NSDate *date;
+@property (nonatomic) NSView *dotView;
 @end
 
 @interface AgendaEventCell : NSView
@@ -311,7 +316,9 @@ static NSString *kEventCellIdentifier = @"EventCell";
 - (NSInteger)numberOfRowsInTableView:(NSTableView *)tableView
 {
     
-    return self.events == nil ? 0 : self.events.count;
+   // return self.events == nil ? 0 : self.events.count;
+    
+    return self.finalDict.count;
 }
 
 - (NSTableRowView *)tableView:(MoTableView *)tableView rowViewForRow:(NSInteger)row
@@ -328,7 +335,7 @@ static NSString *kEventCellIdentifier = @"EventCell";
 - (NSView *)tableView:(MoTableView *)tableView viewForTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
     NSView *v = nil;
-    id obj = self.events[row];
+    id obj = self.finalDict.allKeys[row];
     
     if ([obj isKindOfClass:[NSDate class]]) {
         AgendaDateCell *cell = [_tv makeViewWithIdentifier:kDateCellIdentifier owner:self];
@@ -338,6 +345,17 @@ static NSString *kEventCellIdentifier = @"EventCell";
         cell.DOWTextField.stringValue = [self DOWStringForDate:obj];
         cell.dayTextField.textColor = Theme.agendaDayTextColor;
         cell.DOWTextField.textColor = Theme.agendaDOWTextColor;
+        
+        cell.dotView.wantsLayer = YES;
+        cell.dotView.layer.backgroundColor = [NSColor greenColor].CGColor;
+        cell.dotView.layer.cornerRadius = 4;
+        cell.descTextField.stringValue = [self.finalDict.allValues[row] event].title;
+        NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+        [formatter setDateFormat:@"HH:mm"];
+        NSString *startTime = [formatter stringFromDate:[self.finalDict.allValues[row] event].startDate];
+        NSString *endTime = [formatter stringFromDate:[self.finalDict.allValues[row] event].endDate];
+        
+        cell.timeTextFields.stringValue = [NSString stringWithFormat:@"%@-%@", startTime, endTime];
         v = cell;
     }
     else {
@@ -365,18 +383,18 @@ static NSString *kEventCellIdentifier = @"EventCell";
     });
     
     CGFloat height = dateCell.fittingSize.height;
-    id obj = self.events[row];
+    id obj = self.finalDict.allKeys[row];
     if ([obj isKindOfClass:[EventInfo class]]) {
         eventCell.frame = NSMakeRect(0, 0, NSWidth(_tv.frame), 999); // only width is important here
         [self populateEventCell:eventCell withInfo:obj];
         height = eventCell.fittingSize.height;
     }
-    return height;
+    return 60; //height;
 }
 
 - (BOOL)tableView:(NSTableView *)tableView isGroupRow:(NSInteger)row
 {
-    return [self.events[row] isKindOfClass:[NSDate class]];
+    return [self.finalDict.allKeys[row] isKindOfClass:[NSDate class]];
 }
 
 - (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(NSInteger)row
@@ -420,7 +438,7 @@ static NSString *kEventCellIdentifier = @"EventCell";
     }
     if (row < 0) return;
     if (self.delegate && [self.delegate respondsToSelector:@selector(agendaWantsToDeleteEvent:)]) {
-        EventInfo *info = self.events[row];
+        EventInfo *info = self.finalDict.allValues[row];
         [self.delegate agendaWantsToDeleteEvent:info.event];
     }
 }
@@ -625,6 +643,56 @@ static NSString *kEventCellIdentifier = @"EventCell";
 
 @implementation AgendaRowView
 
+
+
+//- (instancetype)init
+//{
+//    self = [super init];
+//    if (self) {
+//       // self.identifier = kColumnIdentifier;
+//        
+//        
+//        
+//        
+//        _descTextField = [NSTextField labelWithString:@""];
+//        _descTextField.translatesAutoresizingMaskIntoConstraints = NO;
+//        _descTextField.font = [NSFont systemFontOfSize:SizePref.fontSize weight:NSFontWeightSemibold];
+//        _descTextField.textColor = Theme.agendaDayTextColor;
+//        
+//        [_descTextField setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
+//        
+//        
+//        
+//        
+//        
+//        _timeTextFields = [NSTextField labelWithString:@""];
+//        _timeTextFields.translatesAutoresizingMaskIntoConstraints = NO;
+//        _timeTextFields.font = [NSFont systemFontOfSize:SizePref.fontSize weight:NSFontWeightSemibold];
+//        _timeTextFields.textColor = Theme.agendaDayTextColor;
+//        [_timeTextFields setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
+//
+//        [self addSubview:_descTextField];
+//      //  [self addSubview:_timeTextFields];
+//        
+//        [_descTextField.widthAnchor constraintEqualToConstant:self.frame.size.width].active = YES;
+//        [_descTextField.heightAnchor constraintEqualToConstant:self.frame.size.height].active = YES;
+//        [_descTextField.centerXAnchor constraintEqualToAnchor:self.centerXAnchor].active = YES;
+//        [_descTextField.topAnchor constraintEqualToAnchor:self.topAnchor constant:25].active = YES;
+//        
+//        
+////        MoVFLHelper *vfl = [[MoVFLHelper alloc] initWithSuperview:self metrics:nil views:NSDictionaryOfVariableBindings(_descTextField)];
+////        [vfl :@"H:|-10-[_DOWTextField]-(>=4)-[_dayTextField]-10-|" :NSLayoutFormatAlignAllLastBaseline];
+////        [vfl :@"V:|-6-[_dayTextField]-1-|"];
+//        
+//      //  REGISTER_FOR_SIZE_CHANGE;
+//    }
+//    return self;
+//}
+
+
+
+
+
 - (void)drawBackgroundInRect:(NSRect)dirtyRect {
     if (self.isHovered) {
         [Theme.agendaHoverColor set];
@@ -666,10 +734,63 @@ static NSString *kEventCellIdentifier = @"EventCell";
         _DOWTextField.translatesAutoresizingMaskIntoConstraints = NO;
         _DOWTextField.font = [NSFont systemFontOfSize:SizePref.fontSize weight:NSFontWeightSemibold];
         _DOWTextField.textColor = Theme.agendaDOWTextColor;
-
+        
+        
+        
+        
+        _descTextField = [NSTextField labelWithString:@""];
+        _descTextField.translatesAutoresizingMaskIntoConstraints = NO;
+        _descTextField.font = [NSFont systemFontOfSize:SizePref.fontSize weight:NSFontWeightRegular];
+        _descTextField.textColor = Theme.agendaDOWTextColor;
+        
+        [_descTextField setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
+        
+        
+        
+        
+        
+        _timeTextFields = [NSTextField labelWithString:@""];
+        _timeTextFields.translatesAutoresizingMaskIntoConstraints = NO;
+        _timeTextFields.font = [NSFont systemFontOfSize:SizePref.fontSize weight:NSFontWeightRegular];
+        _timeTextFields.textColor = Theme.agendaDayTextColor;
+        [_timeTextFields setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
+        _dotView = [NSView alloc].init;
+     //   [_dotTextFields.layer setBackgroundColor:[[NSColor redColor] CGColor]];
+        _dotView.translatesAutoresizingMaskIntoConstraints = NO;
+        [_dotView.layer setBackgroundColor: [NSColor greenColor].CGColor];
+        [_dotView setContentHuggingPriority:NSLayoutPriorityDefaultHigh forOrientation:NSLayoutConstraintOrientationHorizontal];
         [self addSubview:_dayTextField];
         [self addSubview:_DOWTextField];
-        MoVFLHelper *vfl = [[MoVFLHelper alloc] initWithSuperview:self metrics:nil views:NSDictionaryOfVariableBindings(_dayTextField, _DOWTextField)];
+        [self addSubview:_descTextField];
+        [self addSubview:_timeTextFields];
+        [self addSubview:_dotView];
+        
+        [_dotView.widthAnchor constraintEqualToConstant:8].active = YES;
+        [_dotView.heightAnchor constraintEqualToConstant:8].active = YES;
+        [_dotView.leftAnchor constraintEqualToAnchor:_DOWTextField.leftAnchor].active = YES;
+        [_dotView.topAnchor constraintEqualToAnchor:_dayTextField.topAnchor constant:23].active = YES;
+        
+        
+        
+        
+        [_descTextField.widthAnchor constraintEqualToConstant:150].active = YES;
+        [_descTextField.heightAnchor constraintEqualToConstant:25].active = YES;
+        [_descTextField.leftAnchor constraintEqualToAnchor:_DOWTextField.leftAnchor constant:12].active = YES;
+        [_descTextField.topAnchor constraintEqualToAnchor:_dayTextField.topAnchor constant:20].active = YES;
+        
+        
+        
+        
+        [_timeTextFields.widthAnchor constraintEqualToConstant:150].active = YES;
+        [_timeTextFields.heightAnchor constraintEqualToConstant:25].active = YES;
+        [_timeTextFields.leftAnchor constraintEqualToAnchor:_DOWTextField.leftAnchor constant:12].active = YES;
+        [_timeTextFields.topAnchor constraintEqualToAnchor:_dayTextField.topAnchor constant:35].active = YES;
+        
+        
+        [_DOWTextField.topAnchor constraintEqualToAnchor:self.topAnchor constant:5].active = YES;
+        
+        
+        MoVFLHelper *vfl = [[MoVFLHelper alloc] initWithSuperview:self metrics:nil views:NSDictionaryOfVariableBindings(_dayTextField, _DOWTextField,_descTextField,_timeTextFields)];
         [vfl :@"H:|-10-[_DOWTextField]-(>=4)-[_dayTextField]-10-|" :NSLayoutFormatAlignAllLastBaseline];
         [vfl :@"V:|-6-[_dayTextField]-1-|"];
         

@@ -16,6 +16,8 @@
 @property (nonatomic, weak) NSCalendar *nsCal;
 @property (nonatomic) MoTableView *tv;
 @property (nonatomic) NSArray *events;
+@property (nonatomic) NSMutableDictionary *finalDict; 
+
 @property (nonatomic, weak) id<AgendaDelegate> delegate;
 @property (nonatomic) BOOL showLocation;
 

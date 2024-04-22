@@ -1283,9 +1283,21 @@ MoDate selectedDate;
         self->_agendaVC.events = [self datesAndEventsForDate:self->_moCal.selectedDate days:days];
         selectedDate = self->_moCal.selectedDate;
         [self->_agendaVC reloadData];
+        
+        NSMutableDictionary *finalDict = [[NSMutableDictionary alloc]initWithCapacity:1000];
     [self showMeetingIndicatorIfNecessary];
         if (self->_agendaVC.events.count < 1) {
+            
+            for (NSDate *d in AppDelegate.sharedAppDelegate._eventsForDateNew) {
+                NSArray *newArray = AppDelegate.sharedAppDelegate._eventsForDateNew[d];
+                for (EventInfo *infoData in newArray) {
+                    [finalDict setObject:infoData forKey:d];
+                }
+            }
+            
+            
             self->_agendaVC.events = AppDelegate.sharedAppDelegate._eventsForDateNew.allKeys;
+            self->_agendaVC.finalDict = finalDict;
             self->_agendaVC.reloadData;
         }
     
